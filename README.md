@@ -147,7 +147,7 @@ function (oldvalue, path, rootObject) {
 
 ### DeepProxy
 
-The list/map api exposes **DeepProy**, a submodule which is used internally for creating recursive proxies which execute a provided callback when modified.
+The list/map api exposes **DeepProxy**, a submodule which is used internally for creating recursive proxies which execute a provided callback when modified.
 
 For typical usage, users will not need to interact with DeepProxy, however, it is exposed in case you _do_ want access to its features.
 
