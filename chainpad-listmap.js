@@ -558,10 +558,7 @@ define([
             initialState: Sortify(cfg.data),
             transformFunction: JsonOT.validate,
             channel: cfg.channel,
-            crypto: cfg.crypto || {
-                encrypt: function (x) { return x; },
-                decrypt: function (x) { return x; }
-            },
+            crypto: cfg.crypto,
             network: cfg.network,
             websocketURL: cfg.websocketURL,
             logLevel: 0
