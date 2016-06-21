@@ -557,10 +557,12 @@ define([
         var config = {
             initialState: Sortify(cfg.data),
             transformFunction: JsonOT.validate,
-            userName: cfg.crypto.rand64(8), // TODO stub this in case there is no crypto module provided?
             channel: cfg.channel,
-            cryptKey: cfg.cryptKey, // TODO make sure things work without this code
-            crypto: cfg.crypto, // stub if not provided
+            crypto: cfg.crypto || {
+                encrypt: function (x) { return x; },
+                decrypt: function (x) { return x; }
+            },
+            network: cfg.network,
             websocketURL: cfg.websocketURL,
             logLevel: 0
         };
