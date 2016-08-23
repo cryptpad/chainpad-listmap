@@ -4,11 +4,11 @@ define([
     '/bower_components/chainpad-json-validator/json-ot.js',
     'json.sortify',
     '/bower_components/textpatcher/TextPatcher.amd.js',
-    '/bower_components/proxy-polyfill/proxy.min.js', // https://github.com/GoogleChrome/proxy-polyfill
 ], function (Realtime, JsonOT, Sortify, TextPatcher) {
     var api = {};
     // linter complains if this isn't defined
-    var Proxy = window.Proxy;
+
+    var isFakeProxy = typeof window.Proxy === "undefined";
 
     var DeepProxy = api.DeepProxy = (function () {
 
@@ -24,7 +24,8 @@ define([
             return dat === null?  'null': isArray(dat)?'array': typeof(dat);
         };
 
-        var isProxyable = deepProxy.isProxyable = function (obj) {
+        var isProxyable = deepProxy.isProxyable = function (obj, forceCheck) {
+            if (typeof forceCheck === "undefined" && isFakeProxy) { return false; }
             return ['object', 'array'].indexOf(type(obj)) !== -1;
         };
 
@@ -55,20 +56,8 @@ define([
 
         var lengthDescending = function (a, b) { return b.pattern.length - a.pattern.length; };
 
-        var getter = deepProxy.get = function (cb) {
-            var events = {
-                disconnect: [],
-                change: [],
-                ready: [],
-                remove: [],
-                create: [],
-            };
-
-            /*  TODO implement 'off' as well.
-                change 'setter' to warn users when they attempt to set 'off'
-            */
-
-            var on = function (evt, pattern, f) {
+        var on = function(events) {
+            return function (evt, pattern, f) {
                 switch (evt) {
                     case 'change':
                         // pattern needs to be an array
@@ -129,10 +118,24 @@ define([
                 }
                 return this;
             };
+        };
+
+        var getter = deepProxy.get = function (cb) {
+            var events = {
+                disconnect: [],
+                change: [],
+                ready: [],
+                remove: [],
+                create: [],
+            };
+
+            /*  TODO implement 'off' as well.
+                change 'setter' to warn users when they attempt to set 'off'
+            */
 
             return function (obj, prop) {
                 if (prop === 'on') {
-                    return on;
+                    return on(events);
                 } else if (prop === '_events') {
                     return events;
                 }
@@ -147,7 +150,30 @@ define([
             };
         };
 
-        var create = deepProxy.create = function (obj, opt) {
+        var remoteChangeFlag = deepProxy.remoteChangeFlag = false;
+
+        var stringifyFakeProxy = deepProxy.stringifyFakeProxy = function (proxy) {
+            var copy = JSON.parse(Sortify(proxy));
+            delete copy._events;
+            return Sortify(copy);
+        };
+
+        var checkLocalChange = deepProxy.checkLocalChange = function (obj, cb) {
+            var oldObj = stringifyFakeProxy(obj);
+            window.setInterval(function() {
+                var newObj = stringifyFakeProxy(obj);
+                if (newObj !== oldObj) {
+                    oldObj = newObj;
+                    if (remoteChangeFlag) {
+                        remoteChangeFlag = false;
+                    } else {
+                        cb();
+                    }
+                }
+            },300);
+        };
+
+        var create = deepProxy.create = function (obj, opt, isSubObj) {
             /*  recursively create proxies in case users do:
                 `x.a = {b: {c: 5}};
 
@@ -178,8 +204,24 @@ define([
                     // if it's not an array or object, you don't need to proxy it
                     throw new Error('attempted to make a proxy of an unproxyable object');
             }
+            if (!isFakeProxy) {
+                return new Proxy(obj, methods);
+            }
 
-            return new Proxy(obj, methods);
+            var proxy = JSON.parse(JSON.stringify(obj));
+
+            if (typeof isSubObj === "undefined" || !isSubObj) {
+                var events = {
+                    disconnect: [],
+                    change: [],
+                    ready: [],
+                    remove: [],
+                    create: [],
+                };
+                proxy.on = on(events);
+                proxy._events = events;
+            }
+            return proxy;
         };
 
         // onChange(path, key, root, oldval, newval)
@@ -358,6 +400,8 @@ define([
             Akeys.forEach(function (a) {
                 var old = A[a];
 
+                if (a === "on" || a === "_events") { return; }
+
                 // the key was deleted
                 if (Bkeys.indexOf(a) === -1 || type(B[a]) === 'undefined') {
                     onRemove(path, a, root, old, true);
@@ -517,13 +561,13 @@ define([
                 /* use .call so you can supply a different `this` value */
                 case 'array':
                     arrays.call(A, A, B, function (obj) {
-                        return create(obj, cb);
+                        return create(obj, cb, true);
                     }, [], A);
                     break;
                 case 'object':
                 //   arrays.call(this, A   , B   , f, path    , root)
                     objects.call(A, A, B, function (obj) {
-                        return create(obj, cb);
+                        return create(obj, cb, true);
                     }, [], A);
                     break;
                 default:
@@ -537,7 +581,7 @@ define([
     var create = api.create = function (cfg) {
         /* validate your inputs before proceeding */
 
-        if (!DeepProxy.isProxyable(cfg.data)) {
+        if (!DeepProxy.isProxyable(cfg.data, true)) {
             throw new Error('unsupported datatype: '+ DeepProxy.type(cfg.data));
         }
 
@@ -570,7 +614,7 @@ define([
         var proxy;
 
         var onLocal = config.onLocal = function () {
-            var strung = Sortify(proxy);
+            var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
 
             realtime.patchText(strung);
 
@@ -585,7 +629,7 @@ define([
             }
         };
 
-        proxy = DeepProxy.create(cfg.data, onLocal, true);
+        proxy = DeepProxy.create(cfg.data, onLocal);
 
         var onInit = config.onInit = function (info) {
             realtime = info.realtime;
@@ -612,6 +656,8 @@ define([
                 handler.cb(info);
             });
 
+            DeepProxy.checkLocalChange(proxy, onLocal);
+
             initializing = false;
         };
 
@@ -620,6 +666,7 @@ define([
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
 
+            DeepProxy.remoteChangeFlag = true;
             DeepProxy.update(proxy, parsed, onLocal);
         };
 
