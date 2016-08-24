@@ -8,6 +8,8 @@ define([
     var api = {};
     // linter complains if this isn't defined
 
+    // "Proxy" is undefined in Safari : we need to use an normal object and check if there are local
+    // changes regurlarly.
     var isFakeProxy = typeof window.Proxy === "undefined";
 
     var DeepProxy = api.DeepProxy = (function () {
@@ -24,6 +26,8 @@ define([
             return dat === null?  'null': isArray(dat)?'array': typeof(dat);
         };
 
+        /*  Check if an (sub-)element in an object or an array and should be a proxy.
+            If the browser doesn't support Proxy, return false */
         var isProxyable = deepProxy.isProxyable = function (obj, forceCheck) {
             if (typeof forceCheck === "undefined" && isFakeProxy) { return false; }
             return ['object', 'array'].indexOf(type(obj)) !== -1;
@@ -56,6 +60,9 @@ define([
 
         var lengthDescending = function (a, b) { return b.pattern.length - a.pattern.length; };
 
+        /*  TODO implement 'off' as well.
+            change 'setter' to warn users when they attempt to set 'off'
+        */
         var on = function(events) {
             return function (evt, pattern, f) {
                 switch (evt) {
@@ -129,10 +136,6 @@ define([
                 create: [],
             };
 
-            /*  TODO implement 'off' as well.
-                change 'setter' to warn users when they attempt to set 'off'
-            */
-
             return function (obj, prop) {
                 if (prop === 'on') {
                     return on(events);
@@ -143,7 +146,12 @@ define([
             };
         };
 
-        var handlers = deepProxy.handlers = function (cb) {
+        var handlers = deepProxy.handlers = function (cb, isRoot) {
+            if (!isRoot) {
+                return {
+                    set: setter(cb)
+                };
+            }
             return {
                 set: setter(cb),
                 get: getter(cb),
@@ -173,7 +181,7 @@ define([
             },300);
         };
 
-        var create = deepProxy.create = function (obj, opt, isSubObj) {
+        var create = deepProxy.create = function (obj, opt, isRoot) {
             /*  recursively create proxies in case users do:
                 `x.a = {b: {c: 5}};
 
@@ -183,7 +191,9 @@ define([
 
             // if the user supplied a callback, use it to create handlers
             // this saves a bit of work in recursion
-            var methods = type(opt) === 'function'? handlers(opt) : opt;
+
+            var methods = type(opt) === 'function'? handlers(opt, isRoot) : opt;
+
             switch (type(obj)) {
                 case 'object':
                     var keys = Object.keys(obj);
@@ -210,7 +220,7 @@ define([
 
             var proxy = JSON.parse(JSON.stringify(obj));
 
-            if (typeof isSubObj === "undefined" || !isSubObj) {
+            if (isRoot) {
                 var events = {
                     disconnect: [],
                     change: [],
@@ -561,13 +571,13 @@ define([
                 /* use .call so you can supply a different `this` value */
                 case 'array':
                     arrays.call(A, A, B, function (obj) {
-                        return create(obj, cb, true);
+                        return create(obj, cb);
                     }, [], A);
                     break;
                 case 'object':
                 //   arrays.call(this, A   , B   , f, path    , root)
                     objects.call(A, A, B, function (obj) {
-                        return create(obj, cb, true);
+                        return create(obj, cb);
                     }, [], A);
                     break;
                 default:
@@ -629,7 +639,7 @@ define([
             }
         };
 
-        proxy = DeepProxy.create(cfg.data, onLocal);
+        proxy = DeepProxy.create(cfg.data, onLocal, true);
 
         var onInit = config.onInit = function (info) {
             realtime = info.realtime;
