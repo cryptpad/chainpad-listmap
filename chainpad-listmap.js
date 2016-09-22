@@ -608,6 +608,8 @@ define([
             };
         }
 
+        var readOnly = cfg.readOnly;
+
         var config = {
             initialState: Sortify(cfg.data),
             transformFunction: JsonOT.validate,
@@ -615,6 +617,8 @@ define([
             crypto: cfg.crypto,
             network: cfg.network,
             websocketURL: cfg.websocketURL,
+            validateKey: cfg.validateKey,
+            readOnly: cfg.readOnly,
             logLevel: 0
         };
 
@@ -624,6 +628,7 @@ define([
         var proxy;
 
         var onLocal = config.onLocal = function () {
+            if (readOnly) { return; }
             var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
 
             realtime.patchText(strung);
