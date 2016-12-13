@@ -139,6 +139,8 @@ define([
             return function (obj, prop) {
                 if (prop === 'on') {
                     return on(events);
+                } else if (prop === '_isProxy') {
+                    return true;
                 } else if (prop === '_events') {
                     return events;
                 }
@@ -149,7 +151,13 @@ define([
         var handlers = deepProxy.handlers = function (cb, isRoot) {
             if (!isRoot) {
                 return {
-                    set: setter(cb)
+                    set: setter(cb),
+                    get: function (obj, prop) {
+                        if (prop === '_isProxy') {
+                            return true;
+                        }
+                        return obj[prop];
+                    }
                 };
             }
             return {
@@ -215,6 +223,9 @@ define([
                     throw new Error('attempted to make a proxy of an unproxyable object');
             }
             if (!isFakeProxy) {
+                if (obj._isProxy) {
+                    return obj;
+                }
                 return new Proxy(obj, methods);
             }
 
@@ -686,6 +697,12 @@ define([
         };
 
         var onAbort = config.onAbort = function (info) {
+            proxy._events.disconnect.forEach(function (handler) {
+                handler.cb(info);
+            });
+        };
+
+        var onError = config.onError = function (info) {
             proxy._events.disconnect.forEach(function (handler) {
                 handler.cb(info);
             });
