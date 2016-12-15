@@ -613,7 +613,7 @@ define([
                 encrypt: function (msg) {
                     return msg;
                 },
-                descrypt: function (msg) {
+                decrypt: function (msg) {
                     return msg;
                 }
             };
@@ -623,7 +623,7 @@ define([
 
         var config = {
             initialState: Sortify(cfg.data),
-            transformFunction: JsonOT.validate,
+            transformFunction: JsonOT.transform || JsonOT.validate,
             channel: cfg.channel,
             crypto: cfg.crypto,
             network: cfg.network,
@@ -641,7 +641,6 @@ define([
         var onLocal = config.onLocal = function () {
             if (readOnly) { return; }
             var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
-
             realtime.patchText(strung);
 
             // try harder
@@ -655,14 +654,17 @@ define([
             }
         };
 
-        proxy = DeepProxy.create(cfg.data, onLocal, true);
+        var HAS_CHANGED = false;
+        proxy = DeepProxy.create(cfg.data, function () {
+            HAS_CHANGED = true;
+        }, true);
 
         var onInit = config.onInit = function (info) {
             realtime = info.realtime;
             // create your patcher
             realtime.patchText = TextPatcher.create({
                 realtime: realtime,
-                logging: config.logging || false,
+                logging: cfg.logging || false,
             });
 
             proxy._events.create.forEach(function (handler) {
@@ -676,7 +678,13 @@ define([
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
 
-            DeepProxy.update(proxy, parsed, onLocal);
+            DeepProxy.update(proxy, parsed, function() {
+                HAS_CHANGED = true;
+            });
+            if (HAS_CHANGED) {
+                onLocal();
+                HAS_CHANGED = false;
+            }
 
             proxy._events.ready.forEach(function (handler) {
                 handler.cb(info);
@@ -692,8 +700,16 @@ define([
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
 
+            var changed = false;
             DeepProxy.remoteChangeFlag = true;
-            DeepProxy.update(proxy, parsed, onLocal);
+            DeepProxy.update(proxy, parsed, function() {
+                changed = true;
+            });
+            if (changed || HAS_CHANGED) {
+                onLocal();
+                HAS_CHANGED = false;
+                changed = false;
+            }
         };
 
         var onAbort = config.onAbort = function (info) {
