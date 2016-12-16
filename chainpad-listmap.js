@@ -171,10 +171,12 @@ define([
         var stringifyFakeProxy = deepProxy.stringifyFakeProxy = function (proxy) {
             var copy = JSON.parse(Sortify(proxy));
             delete copy._events;
+            delete copy._isProxy;
             return Sortify(copy);
         };
 
         var checkLocalChange = deepProxy.checkLocalChange = function (obj, cb) {
+            if (!isFakeProxy) { return; }
             var oldObj = stringifyFakeProxy(obj);
             window.setInterval(function() {
                 var newObj = stringifyFakeProxy(obj);
@@ -654,10 +656,15 @@ define([
             }
         };
 
-        var HAS_CHANGED = false;
-        proxy = DeepProxy.create(cfg.data, function () {
-            HAS_CHANGED = true;
-        }, true);
+        var setterCb = function () {
+            if (DeepProxy.remoteChangeFlag) {
+                DeepProxy.remoteChangeFlag = false;
+            } else {
+                onLocal();
+            }
+        };
+
+        proxy = DeepProxy.create(cfg.data, setterCb, true);
 
         var onInit = config.onInit = function (info) {
             realtime = info.realtime;
@@ -678,13 +685,7 @@ define([
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
 
-            DeepProxy.update(proxy, parsed, function() {
-                HAS_CHANGED = true;
-            });
-            if (HAS_CHANGED) {
-                onLocal();
-                HAS_CHANGED = false;
-            }
+            DeepProxy.update(proxy, parsed, setterCb);
 
             proxy._events.ready.forEach(function (handler) {
                 handler.cb(info);
@@ -700,16 +701,8 @@ define([
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
 
-            var changed = false;
             DeepProxy.remoteChangeFlag = true;
-            DeepProxy.update(proxy, parsed, function() {
-                changed = true;
-            });
-            if (changed || HAS_CHANGED) {
-                onLocal();
-                HAS_CHANGED = false;
-                changed = false;
-            }
+            DeepProxy.update(proxy, parsed, setterCb);
         };
 
         var onAbort = config.onAbort = function (info) {
