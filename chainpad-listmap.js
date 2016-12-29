@@ -641,10 +641,8 @@ define([
 
         var proxy;
 
-        var initializing = true;
-
         var onLocal = config.onLocal = function () {
-            if (readOnly || initializing) { return; }
+            if (readOnly) { return; }
             var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
             realtime.patchText(strung);
 
@@ -660,7 +658,6 @@ define([
         };
 
         var setterCb = function () {
-            if (initializing) { return; }
             if (DeepProxy.remoteChangeFlag) {
                 DeepProxy.remoteChangeFlag = false;
             } else {
@@ -682,6 +679,8 @@ define([
                 handler.cb(info);
             });
         };
+
+        var initializing = true;
 
         var onReady = config.onReady = function (info) {
             var userDoc = realtime.getUserDoc();
