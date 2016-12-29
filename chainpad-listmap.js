@@ -3,7 +3,7 @@ define([
     '/bower_components/chainpad-netflux/chainpad-netflux.js',
     '/bower_components/chainpad-json-validator/json-ot.js',
     'json.sortify',
-    '/bower_components/textpatcher/TextPatcher.amd.js',
+    '/bower_components/textpatcher/TextPatcher.js',
 ], function (Realtime, JsonOT, Sortify, TextPatcher) {
     var api = {};
     // linter complains if this isn't defined
