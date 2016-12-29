@@ -632,7 +632,8 @@ define([
             websocketURL: cfg.websocketURL,
             validateKey: cfg.validateKey,
             readOnly: cfg.readOnly,
-            logLevel: 0
+            userName: cfg.userName || 'listmap',
+            logLevel: typeof(cfg.logLevel) === 'undefined'? 0: cfg.logLevel,
         };
 
         var rt;
