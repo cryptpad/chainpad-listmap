@@ -658,9 +658,7 @@ define([
         };
 
         var setterCb = function () {
-            if (DeepProxy.remoteChangeFlag) {
-                DeepProxy.remoteChangeFlag = false;
-            } else {
+            if (!DeepProxy.remoteChangeFlag) {
                 onLocal();
             }
         };
@@ -704,6 +702,7 @@ define([
 
             DeepProxy.remoteChangeFlag = true;
             DeepProxy.update(proxy, parsed, setterCb);
+            DeepProxy.remoteChangeFlag = false;
         };
 
         var onAbort = config.onAbort = function (info) {
