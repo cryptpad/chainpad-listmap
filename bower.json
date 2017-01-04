@@ -22,7 +22,7 @@
   ],
   "dependencies": {
     "json.sortify": "^2.1.0",
-    "chainpad-json-validator": "^0.1.1",
+    "chainpad-json-validator": "^0.1.2",
     "textpatcher": "^1.2.0",
     "chainpad-netflux": "^0.4.0"
   }
