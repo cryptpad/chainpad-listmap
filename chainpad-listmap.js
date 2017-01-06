@@ -113,6 +113,14 @@ define([
                             }
                         });
                         break;
+                    case 'reconnect':
+                        events.reconnect.push({
+                            cb: function (info) {
+                                // as above
+                                pattern(info);
+                            }
+                        });
+                        break;
                     case 'create':
                         events.create.push({
                             cb: function (info) {
@@ -130,6 +138,7 @@ define([
         var getter = deepProxy.get = function (cb) {
             var events = {
                 disconnect: [],
+                reconnect: [],
                 change: [],
                 ready: [],
                 remove: [],
@@ -707,6 +716,12 @@ define([
 
         var onAbort = config.onAbort = function (info) {
             proxy._events.disconnect.forEach(function (handler) {
+                handler.cb(info);
+            });
+        };
+
+        var onConnectionChange = config.onConnectionChange = function (info) {
+            proxy._events.reconnect.forEach(function (handler) {
                 handler.cb(info);
             });
         };
