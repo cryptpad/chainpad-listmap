@@ -245,6 +245,7 @@ define([
             if (isRoot) {
                 var events = {
                     disconnect: [],
+                    reconnect: [],
                     change: [],
                     ready: [],
                     remove: [],
