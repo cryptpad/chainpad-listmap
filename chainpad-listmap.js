@@ -722,7 +722,14 @@ define([
         };
 
         var onConnectionChange = config.onConnectionChange = function (info) {
-            proxy._events.reconnect.forEach(function (handler) {
+            if (info.state) { // reconnect
+                proxy._events.reconnect.forEach(function (handler) {
+                    handler.cb(info);
+                });
+                return;
+            }
+            // disconnected
+            proxy._events.disconnect.forEach(function (handler) {
                 handler.cb(info);
             });
         };
