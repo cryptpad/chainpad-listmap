@@ -676,13 +676,6 @@ define([
         proxy = DeepProxy.create(cfg.data, setterCb, true);
 
         var onInit = config.onInit = function (info) {
-            realtime = info.realtime;
-            // create your patcher
-            realtime.patchText = TextPatcher.create({
-                realtime: realtime,
-                logging: cfg.logging || false,
-            });
-
             proxy._events.create.forEach(function (handler) {
                 handler.cb(info);
             });
@@ -691,6 +684,14 @@ define([
         var initializing = true;
 
         var onReady = config.onReady = function (info) {
+            realtime = rt.realtime = info.realtime;
+
+            // create your patcher
+            realtime.patchText = TextPatcher.create({
+                realtime: realtime,
+                logging: cfg.logging || false,
+            });
+
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
 
@@ -723,6 +724,7 @@ define([
 
         var onConnectionChange = config.onConnectionChange = function (info) {
             if (info.state) { // reconnect
+                initializing = true;
                 proxy._events.reconnect.forEach(function (handler) {
                     handler.cb(info);
                 });
