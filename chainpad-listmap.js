@@ -17,7 +17,7 @@ define([
         var deepProxy = {};
 
         var isArray = deepProxy.isArray = function (obj) {
-            return Object.prototype.toString.call(obj)==='[object Array]';
+            return Array.isArray(obj);
         };
 
         /*  Arrays and nulls both register as 'object' when using native typeof
@@ -210,21 +210,19 @@ define([
 
             // if the user supplied a callback, use it to create handlers
             // this saves a bit of work in recursion
-
             var methods = type(opt) === 'function'? handlers(opt, isRoot) : opt;
-
             switch (type(obj)) {
                 case 'object':
                     var keys = Object.keys(obj);
                     keys.forEach(function (k) {
-                        if (isProxyable(obj[k])) {
+                        if (isProxyable(obj[k]) && !obj[k]._isProxy) {
                             obj[k] = create(obj[k], opt);
                         }
                     });
                     break;
                 case 'array':
                     obj.forEach(function (o, i) {
-                        if (isProxyable(o)) {
+                        if (isProxyable(o) && !o._isProxy) {
                             obj[i] = create(obj[i], opt);
                         }
                     });
