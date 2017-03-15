@@ -682,13 +682,14 @@ define([
         var initializing = true;
 
         var onReady = config.onReady = function (info) {
-            realtime = rt.realtime = info.realtime;
-
             // create your patcher
-            realtime.patchText = TextPatcher.create({
-                realtime: realtime,
-                logging: cfg.logging || false,
-            });
+            if (!realtime || realtime !== info.realtime) {
+                realtime = rt.realtime = info.realtime;
+                realtime.patchText = TextPatcher.create({
+                    realtime: realtime,
+                    logging: cfg.logging || false,
+                });
+            }
 
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
