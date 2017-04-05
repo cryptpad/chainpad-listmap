@@ -648,15 +648,16 @@ define([
         var realtime;
 
         var proxy;
+        var patchText;
 
         var onLocal = config.onLocal = function () {
             if (readOnly) { return; }
             var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
-            realtime.patchText(strung);
+            patchText(strung);
 
             // try harder
             if (realtime.getUserDoc() !== strung) {
-                realtime.patchText(strung);
+                patchText(strung);
             }
 
             // onLocal
@@ -685,7 +686,7 @@ define([
             // create your patcher
             if (!realtime || realtime !== info.realtime) {
                 realtime = rt.realtime = info.realtime;
-                realtime.patchText = TextPatcher.create({
+                patchText = TextPatcher.create({
                     realtime: realtime,
                     logging: cfg.logging || false,
                 });
