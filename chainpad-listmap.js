@@ -157,6 +157,14 @@ define([
             };
         };
 
+        var deleter = deepProxy.delete = function (cb) {
+            return function (obj, prop) {
+                delete obj[prop];
+                cb();
+                return true;
+            };
+        };
+
         var handlers = deepProxy.handlers = function (cb, isRoot) {
             if (!isRoot) {
                 return {
@@ -172,6 +180,7 @@ define([
             return {
                 set: setter(cb),
                 get: getter(cb),
+                deleteProperty: deleter(cb),
             };
         };
 
