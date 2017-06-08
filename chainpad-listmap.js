@@ -16,8 +16,8 @@ define([
 
         var deepProxy = {};
 
-        var isArray = deepProxy.isArray = function (obj) {
-            return Array.isArray(obj);
+        var isArray = deepProxy.isArray = Array.isArray || function (obj) {
+            return Object.toString(obj) === '[object Array]';
         };
 
         /*  Arrays and nulls both register as 'object' when using native typeof
