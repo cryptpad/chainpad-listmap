@@ -174,7 +174,8 @@ define([
                             return true;
                         }
                         return obj[prop];
-                    }
+                    },
+                    deleteProperty: deleter(cb),
                 };
             }
             return {
