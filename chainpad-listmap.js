@@ -160,7 +160,7 @@ define([
         var deleter = deepProxy.delete = function (cb) {
             return function (obj, prop) {
                 delete obj[prop];
-                cb();
+                if (typeof(obj[prop]) !== 'undefined') { cb(); }
                 return true;
             };
         };
