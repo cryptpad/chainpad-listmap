@@ -159,8 +159,9 @@ define([
 
         var deleter = deepProxy.delete = function (cb) {
             return function (obj, prop) {
+                if (typeof(obj[prop]) === 'undefined') { return true; }
                 delete obj[prop];
-                if (typeof(obj[prop]) !== 'undefined') { cb(); }
+                cb();
                 return true;
             };
         };
