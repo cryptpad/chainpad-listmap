@@ -1,11 +1,10 @@
 require.config({ paths: { 'json.sortify': '/bower_components/json.sortify/dist/JSON.sortify' } });
 define([
     '/bower_components/chainpad-netflux/chainpad-netflux.js',
-    '/bower_components/chainpad-json-validator/json-ot.js',
-    'json.sortify',
-    '/bower_components/textpatcher/TextPatcher.js',
-], function (Realtime, JsonOT, Sortify, TextPatcher) {
+    'json.sortify'
+], function (Realtime, Sortify) {
     var api = {};
+    var ChainPad;
     // linter complains if this isn't defined
 
     // "Proxy" is undefined in Safari : we need to use an normal object and check if there are local
@@ -42,7 +41,7 @@ define([
                 }
 
                 if (isProxyable(value)) {
-                    var proxy = obj[prop] = deepProxy.create(value, cb);
+                    obj[prop] = deepProxy.create(value, cb);
                 } else {
                     obj[prop] = value;
                 }
@@ -135,7 +134,7 @@ define([
             };
         };
 
-        var getter = deepProxy.get = function (cb) {
+        var getter = deepProxy.get = function () {
             var events = {
                 disconnect: [],
                 reconnect: [],
@@ -195,7 +194,7 @@ define([
             return Sortify(copy);
         };
 
-        var checkLocalChange = deepProxy.checkLocalChange = function (obj, cb) {
+        deepProxy.checkLocalChange = function (obj, cb) {
             if (!isFakeProxy) { return; }
             var oldObj = stringifyFakeProxy(obj);
             window.setInterval(function() {
@@ -246,7 +245,7 @@ define([
                 if (obj._isProxy) {
                     return obj;
                 }
-                return new Proxy(obj, methods);
+                return new window.Proxy(obj, methods);
             }
 
             var proxy = JSON.parse(JSON.stringify(obj));
@@ -275,7 +274,7 @@ define([
                 we can accomplish this with Array.some because we've presorted
                 listeners by the specificity of their path
             */
-            root._events.change.some(function (handler, i) {
+            root._events.change.some(function (handler) {
                 return handler.cb(oldval, newval, P, root) === false;
             });
         };
@@ -303,7 +302,7 @@ define([
                         // the top of an onremove should emit an onchange instead
                         onChange(path, key, root, old, undefined);// no newval since it's a deletion
                     } else {
-                        root._events.remove.forEach(function (handler, i) {
+                        root._events.remove.forEach(function (handler) {
                             return handler.cb(X, newpath, root);
                         });
                     }
@@ -317,18 +316,18 @@ define([
                     if (top) {
                         onChange(path, key, root, old, undefined);// no newval since it's a deletion
                     } else {
-                        root._events.remove.forEach(function (handler, i) {
+                        root._events.remove.forEach(function (handler) {
                             return handler.cb(X, newpath, root, old, false);
                         });
                     }
                     // remove all of the object's children
-                    Object.keys(X).forEach(function (key, i) {
+                    Object.keys(X).forEach(function (key) {
                         onRemove(newpath, key, root, X[key], false);
                     });
 
                     break;
                 default:
-                    root._events.remove.forEach(function (handler, i) {
+                    root._events.remove.forEach(function (handler) {
                         return handler.cb(X, newpath, root);
                     });
                     break;
@@ -518,7 +517,6 @@ define([
                 if (l_A > l_B) {
                     // A was longer than B, so there have been deletions
                     var i = l_B;
-                    var t_a;
                     var old;
 
                     for (; i <= l_B; i++) {
@@ -591,7 +589,7 @@ define([
             return;
         };
 
-        var update = deepProxy.update = function (A, B, cb) {
+        deepProxy.update = function (A, B, cb) {
             var t_A = type(A);
             var t_B = type(B);
 
@@ -620,11 +618,16 @@ define([
         return deepProxy;
     }());
 
-    var create = api.create = function (cfg) {
+    api.create = function (cfg) {
         /* validate your inputs before proceeding */
 
         if (!DeepProxy.isProxyable(cfg.data, true)) {
             throw new Error('unsupported datatype: '+ DeepProxy.type(cfg.data));
+        }
+
+        ChainPad = cfg.ChainPad || window.ChainPad;
+        if (typeof(ChainPad.SmartJSONTransformer) !== 'function') {
+            throw new Error("Please update ChainPad");
         }
 
         if (!cfg.crypto) {
@@ -644,7 +647,7 @@ define([
 
         var config = {
             initialState: Sortify(cfg.data),
-            transformFunction: JsonOT.transform || JsonOT.validate,
+            patchTransformer: ChainPad.SmartJSONTransformer,
             channel: cfg.channel,
             crypto: cfg.crypto,
             network: cfg.network,
@@ -659,16 +662,15 @@ define([
         var realtime;
 
         var proxy;
-        var patchText;
 
         var onLocal = config.onLocal = function () {
             if (readOnly) { return; }
             var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
-            patchText(strung);
+            realtime.contentUpdate(strung);
 
             // try harder
             if (realtime.getUserDoc() !== strung) {
-                patchText(strung);
+                realtime.contentUpdate(strung);
             }
 
             // onLocal
@@ -685,7 +687,7 @@ define([
 
         proxy = DeepProxy.create(cfg.data, setterCb, true);
 
-        var onInit = config.onInit = function (info) {
+        config.onInit = function (info) {
             proxy._events.create.forEach(function (handler) {
                 handler.cb(info);
             });
@@ -693,14 +695,9 @@ define([
 
         var initializing = true;
 
-        var onReady = config.onReady = function (info) {
-            // create your patcher
+        config.onReady = function (info) {
             if (!realtime || realtime !== info.realtime) {
                 realtime = rt.realtime = info.realtime;
-                patchText = TextPatcher.create({
-                    realtime: realtime,
-                    logging: cfg.logging || false,
-                });
             }
 
             var userDoc = realtime.getUserDoc();
@@ -717,7 +714,7 @@ define([
             initializing = false;
         };
 
-        var onRemote = config.onRemote = function (info) {
+        config.onRemote = function (/*info*/) {
             if (initializing) { return; }
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
@@ -727,13 +724,13 @@ define([
             DeepProxy.remoteChangeFlag = false;
         };
 
-        var onAbort = config.onAbort = function (info) {
+        config.onAbort = function (info) {
             proxy._events.disconnect.forEach(function (handler) {
                 handler.cb(info);
             });
         };
 
-        var onConnectionChange = config.onConnectionChange = function (info) {
+        config.onConnectionChange = function (info) {
             if (info.state) { // reconnect
                 initializing = true;
                 proxy._events.reconnect.forEach(function (handler) {
@@ -747,7 +744,7 @@ define([
             });
         };
 
-        var onError = config.onError = function (info) {
+        config.onError = function (info) {
             proxy._events.disconnect.forEach(function (handler) {
                 handler.cb(info);
             });
