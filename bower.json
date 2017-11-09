@@ -22,6 +22,6 @@
   ],
   "dependencies": {
     "json.sortify": "^2.1.0",
-    "chainpad-netflux": "^0.5.0"
+    "chainpad-netflux": "^0.6.0"
   }
 }
