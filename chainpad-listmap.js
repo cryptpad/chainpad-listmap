@@ -648,6 +648,15 @@ define([
         var config = {
             initialState: Sortify(cfg.data),
             patchTransformer: ChainPad.SmartJSONTransformer,
+            validateContent: cfg.validateContent || function (content) {
+                try {
+                    JSON.parse(content);
+                    return true;
+                } catch (e) {
+                    console.error("Failed to parse, rejecting patch");
+                    return false;
+                }
+            },
             channel: cfg.channel,
             crypto: cfg.crypto,
             network: cfg.network,
