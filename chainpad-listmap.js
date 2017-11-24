@@ -630,6 +630,7 @@ define([
             throw new Error("Please update ChainPad");
         }
 
+        /* Support old-style configuration and new-style */
         if (!cfg.crypto) {
             // complain and stub
             console.log("[chainpad-listmap] no crypto module provided. messages will not be encrypted");
@@ -657,22 +658,27 @@ define([
                     return false;
                 }
             },
-            channel: cfg.channel,
-            crypto: cfg.crypto,
-            network: cfg.network,
-            websocketURL: cfg.websocketURL,
-            validateKey: cfg.validateKey,
             readOnly: cfg.readOnly,
             userName: cfg.userName || 'listmap',
             logLevel: typeof(cfg.logLevel) === 'undefined'? 0: cfg.logLevel,
         };
 
-        var rt;
+        if (cfg.classic) {
+            config.channel = cfg.channel;
+            config.crypto = cfg.crypto;
+            config.network = cfg.network;
+            config.websocketURL = cfg.websocketURL;
+            config.validateKey = cfg.validateKey;
+        }
+
+        var rt = {};
         var realtime;
 
         var proxy;
 
+        var initializing = true;
         var onLocal = config.onLocal = function () {
+            if (initializing) { return; }
             if (readOnly) { return; }
             var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
             realtime.contentUpdate(strung);
@@ -702,7 +708,6 @@ define([
             });
         };
 
-        var initializing = true;
 
         config.onReady = function (info) {
             if (!realtime || realtime !== info.realtime) {
@@ -759,7 +764,15 @@ define([
             });
         };
 
-        rt = Realtime.start(config);
+        /*  Listmap support two configuration modes:
+                Sframe: for use within a sandboxed iframe
+                Classic: supporting our original use-case */
+        if (cfg.common && typeof(cfg.common.startRealtime) === 'function') {
+            // Sframe mode
+            realtime = rt.cpCnInner = cfg.common.startRealtime(config);
+        } else {
+            rt = Realtime.start(config);
+        }
 
         rt.proxy = proxy;
         rt.realtime = realtime;
