@@ -1,3 +1,4 @@
+(function (window) {
 require.config({ paths: { 'json.sortify': '/bower_components/json.sortify/dist/JSON.sortify' } });
 define([
     '/bower_components/chainpad-netflux/chainpad-netflux.js',
@@ -784,3 +785,4 @@ define([
 
     return api;
 });
+}(this));
