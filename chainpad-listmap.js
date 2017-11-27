@@ -1,11 +1,11 @@
+(function (window) {
 require.config({ paths: { 'json.sortify': '/bower_components/json.sortify/dist/JSON.sortify' } });
 define([
     '/bower_components/chainpad-netflux/chainpad-netflux.js',
-    '/bower_components/chainpad-json-validator/json-ot.js',
-    'json.sortify',
-    '/bower_components/textpatcher/TextPatcher.js',
-], function (Realtime, JsonOT, Sortify, TextPatcher) {
+    'json.sortify'
+], function (Realtime, Sortify) {
     var api = {};
+    var ChainPad;
     // linter complains if this isn't defined
 
     // "Proxy" is undefined in Safari : we need to use an normal object and check if there are local
@@ -42,7 +42,7 @@ define([
                 }
 
                 if (isProxyable(value)) {
-                    var proxy = obj[prop] = deepProxy.create(value, cb);
+                    obj[prop] = deepProxy.create(value, cb);
                 } else {
                     obj[prop] = value;
                 }
@@ -135,7 +135,7 @@ define([
             };
         };
 
-        var getter = deepProxy.get = function (cb) {
+        var getter = deepProxy.get = function () {
             var events = {
                 disconnect: [],
                 reconnect: [],
@@ -195,7 +195,7 @@ define([
             return Sortify(copy);
         };
 
-        var checkLocalChange = deepProxy.checkLocalChange = function (obj, cb) {
+        deepProxy.checkLocalChange = function (obj, cb) {
             if (!isFakeProxy) { return; }
             var oldObj = stringifyFakeProxy(obj);
             window.setInterval(function() {
@@ -246,7 +246,7 @@ define([
                 if (obj._isProxy) {
                     return obj;
                 }
-                return new Proxy(obj, methods);
+                return new window.Proxy(obj, methods);
             }
 
             var proxy = JSON.parse(JSON.stringify(obj));
@@ -275,16 +275,18 @@ define([
                 we can accomplish this with Array.some because we've presorted
                 listeners by the specificity of their path
             */
-            root._events.change.some(function (handler, i) {
+            root._events.change.some(function (handler) {
                 return handler.cb(oldval, newval, P, root) === false;
             });
         };
 
         var find = deepProxy.find = function (map, path) {
-            /* safely search for nested values in an object via a path */
-            return (map && path.reduce(function (p, n) {
-                return typeof p[n] !== 'undefined' && p[n];
-            }, map)) || undefined;
+            var l = path.length;
+            for (var i = 0; i < l; i++) {
+                if (typeof(map[path[i]]) === 'undefined') { return; }
+                map = map[path[i]];
+            }
+            return map;
         };
 
         var onRemove = function (path, key, root, old, top) {
@@ -303,7 +305,7 @@ define([
                         // the top of an onremove should emit an onchange instead
                         onChange(path, key, root, old, undefined);// no newval since it's a deletion
                     } else {
-                        root._events.remove.forEach(function (handler, i) {
+                        root._events.remove.forEach(function (handler) {
                             return handler.cb(X, newpath, root);
                         });
                     }
@@ -317,18 +319,18 @@ define([
                     if (top) {
                         onChange(path, key, root, old, undefined);// no newval since it's a deletion
                     } else {
-                        root._events.remove.forEach(function (handler, i) {
+                        root._events.remove.forEach(function (handler) {
                             return handler.cb(X, newpath, root, old, false);
                         });
                     }
                     // remove all of the object's children
-                    Object.keys(X).forEach(function (key, i) {
+                    Object.keys(X).forEach(function (key) {
                         onRemove(newpath, key, root, X[key], false);
                     });
 
                     break;
                 default:
-                    root._events.remove.forEach(function (handler, i) {
+                    root._events.remove.forEach(function (handler) {
                         return handler.cb(X, newpath, root);
                     });
                     break;
@@ -518,7 +520,6 @@ define([
                 if (l_A > l_B) {
                     // A was longer than B, so there have been deletions
                     var i = l_B;
-                    var t_a;
                     var old;
 
                     for (; i <= l_B; i++) {
@@ -591,7 +592,7 @@ define([
             return;
         };
 
-        var update = deepProxy.update = function (A, B, cb) {
+        deepProxy.update = function (A, B, cb) {
             var t_A = type(A);
             var t_B = type(B);
 
@@ -620,16 +621,22 @@ define([
         return deepProxy;
     }());
 
-    var create = api.create = function (cfg) {
+    api.create = function (cfg) {
         /* validate your inputs before proceeding */
 
         if (!DeepProxy.isProxyable(cfg.data, true)) {
             throw new Error('unsupported datatype: '+ DeepProxy.type(cfg.data));
         }
 
-        if (!cfg.crypto) {
+        ChainPad = cfg.ChainPad || window.ChainPad;
+        if (typeof(ChainPad.SmartJSONTransformer) !== 'function') {
+            throw new Error("Please update ChainPad");
+        }
+
+        /* Support old-style configuration and new-style */
+        if (cfg.classic && !cfg.crypto) {
             // complain and stub
-            console.log("[chainpad-listmap] no crypto module provided. messages will not be encrypted");
+            console.error("[chainpad-listmap] no crypto module provided. messages will not be encrypted");
             cfg.crypto = {
                 encrypt: function (msg) {
                     return msg;
@@ -644,31 +651,45 @@ define([
 
         var config = {
             initialState: Sortify(cfg.data),
-            transformFunction: JsonOT.transform || JsonOT.validate,
-            channel: cfg.channel,
-            crypto: cfg.crypto,
-            network: cfg.network,
-            websocketURL: cfg.websocketURL,
-            validateKey: cfg.validateKey,
+            patchTransformer: ChainPad.SmartJSONTransformer,
+            validateContent: cfg.validateContent || function (content) {
+                try {
+                    JSON.parse(content);
+                    return true;
+                } catch (e) {
+                    console.error("Failed to parse, rejecting patch");
+                    return false;
+                }
+            },
             readOnly: cfg.readOnly,
             userName: cfg.userName || 'listmap',
             logLevel: typeof(cfg.logLevel) === 'undefined'? 0: cfg.logLevel,
         };
 
-        var rt;
+        if (cfg.classic) {
+            config.channel = cfg.channel;
+            config.crypto = cfg.crypto;
+            config.network = cfg.network;
+            config.websocketURL = cfg.websocketURL;
+            config.validateKey = cfg.validateKey;
+        }
+
+        var rt = {};
         var realtime;
 
         var proxy;
-        var patchText;
 
+        var initializing = true;
+        var ready = false;
         var onLocal = config.onLocal = function () {
+            if (initializing) { return; }
             if (readOnly) { return; }
             var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
-            patchText(strung);
+            realtime.contentUpdate(strung);
 
             // try harder
             if (realtime.getUserDoc() !== strung) {
-                patchText(strung);
+                realtime.contentUpdate(strung);
             }
 
             // onLocal
@@ -685,22 +706,17 @@ define([
 
         proxy = DeepProxy.create(cfg.data, setterCb, true);
 
-        var onInit = config.onInit = function (info) {
+        config.onInit = function (info) {
             proxy._events.create.forEach(function (handler) {
                 handler.cb(info);
             });
         };
 
-        var initializing = true;
 
-        var onReady = config.onReady = function (info) {
-            // create your patcher
+        config.onReady = function (info) {
+            if (ready) { return; } // never call ready more than once
             if (!realtime || realtime !== info.realtime) {
                 realtime = rt.realtime = info.realtime;
-                patchText = TextPatcher.create({
-                    realtime: realtime,
-                    logging: cfg.logging || false,
-                });
             }
 
             var userDoc = realtime.getUserDoc();
@@ -715,9 +731,10 @@ define([
             DeepProxy.checkLocalChange(proxy, onLocal);
 
             initializing = false;
+            ready = true;
         };
 
-        var onRemote = config.onRemote = function (info) {
+        config.onRemote = function (/*info*/) {
             if (initializing) { return; }
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
@@ -727,13 +744,13 @@ define([
             DeepProxy.remoteChangeFlag = false;
         };
 
-        var onAbort = config.onAbort = function (info) {
+        config.onAbort = function (info) {
             proxy._events.disconnect.forEach(function (handler) {
                 handler.cb(info);
             });
         };
 
-        var onConnectionChange = config.onConnectionChange = function (info) {
+        config.onConnectionChange = function (info) {
             if (info.state) { // reconnect
                 initializing = true;
                 proxy._events.reconnect.forEach(function (handler) {
@@ -747,13 +764,21 @@ define([
             });
         };
 
-        var onError = config.onError = function (info) {
+        config.onError = function (info) {
             proxy._events.disconnect.forEach(function (handler) {
                 handler.cb(info);
             });
         };
 
-        rt = Realtime.start(config);
+        /*  Listmap support two configuration modes:
+                Sframe: for use within a sandboxed iframe
+                Classic: supporting our original use-case */
+        if (cfg.common && typeof(cfg.common.startRealtime) === 'function') {
+            // Sframe mode
+            realtime = rt.cpCnInner = cfg.common.startRealtime(config);
+        } else {
+            rt = Realtime.start(config);
+        }
 
         rt.proxy = proxy;
         rt.realtime = realtime;
@@ -762,3 +787,4 @@ define([
 
     return api;
 });
+}(this));
