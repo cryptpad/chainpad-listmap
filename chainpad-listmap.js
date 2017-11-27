@@ -677,6 +677,7 @@ define([
         var proxy;
 
         var initializing = true;
+        var ready = false;
         var onLocal = config.onLocal = function () {
             if (initializing) { return; }
             if (readOnly) { return; }
@@ -710,6 +711,7 @@ define([
 
 
         config.onReady = function (info) {
+            if (ready) { return; } // never call ready more than once
             if (!realtime || realtime !== info.realtime) {
                 realtime = rt.realtime = info.realtime;
             }
@@ -726,6 +728,7 @@ define([
             DeepProxy.checkLocalChange(proxy, onLocal);
 
             initializing = false;
+            ready = true;
         };
 
         config.onRemote = function (/*info*/) {
