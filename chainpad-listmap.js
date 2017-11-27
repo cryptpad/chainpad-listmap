@@ -634,9 +634,9 @@ define([
         }
 
         /* Support old-style configuration and new-style */
-        if (!cfg.crypto) {
+        if (cfg.classic && !cfg.crypto) {
             // complain and stub
-            console.log("[chainpad-listmap] no crypto module provided. messages will not be encrypted");
+            console.error("[chainpad-listmap] no crypto module provided. messages will not be encrypted");
             cfg.crypto = {
                 encrypt: function (msg) {
                     return msg;
