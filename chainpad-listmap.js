@@ -281,10 +281,12 @@ define([
         };
 
         var find = deepProxy.find = function (map, path) {
-            /* safely search for nested values in an object via a path */
-            return (map && path.reduce(function (p, n) {
-                return typeof p[n] !== 'undefined' && p[n];
-            }, map)) || undefined;
+            var l = path.length;
+            for (var i = 0; i < l; i++) {
+                if (typeof(map[path[i]]) === 'undefined') { return; }
+                map = map[path[i]];
+            }
+            return map;
         };
 
         var onRemove = function (path, key, root, old, top) {
