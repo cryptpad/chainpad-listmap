@@ -714,7 +714,11 @@ define([
 
 
         config.onReady = function (info) {
-            if (ready) { return; } // never call ready more than once
+            if (ready) {
+                // never call ready more than once
+                initializing = false;
+                return;
+            }
             if (!realtime || realtime !== info.realtime) {
                 realtime = rt.realtime = info.realtime;
             }
