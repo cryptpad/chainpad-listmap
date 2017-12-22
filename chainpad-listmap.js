@@ -681,21 +681,24 @@ define([
 
         var initializing = true;
         var ready = false;
-        var onLocal = config.onLocal = function () {
+
+        var localTo;
+        var onLocal = config.onLocal = function (remote) {
             if (initializing) { return; }
             if (readOnly) { return; }
             var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
-            realtime.contentUpdate(strung);
 
-            // try harder
-            if (realtime.getUserDoc() !== strung) {
+            var then = function () {
                 realtime.contentUpdate(strung);
-            }
+                // try harder
+                if (realtime.getUserDoc() !== strung) { realtime.contentUpdate(strung); }
+                // onLocal
+                if (cfg.onLocal) { cfg.onLocal(); }
+            };
 
-            // onLocal
-            if (cfg.onLocal) {
-                cfg.onLocal();
-            }
+            clearTimeout(localTo);
+            if (remote) { return void then(); }
+            localTo = setTimeout(then);
         };
 
         var setterCb = function () {
