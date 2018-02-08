@@ -731,14 +731,14 @@ define([
 
             DeepProxy.update(proxy, parsed, setterCb);
 
-            proxy._events.ready.forEach(function (handler) {
-                handler.cb(info);
-            });
-
             DeepProxy.checkLocalChange(proxy, onLocal);
 
             initializing = false;
             ready = true;
+
+            proxy._events.ready.forEach(function (handler) {
+                handler.cb(info);
+            });
         };
 
         config.onRemote = function (/*info*/) {
