@@ -128,6 +128,14 @@ define([
                             }
                         });
                         break;
+                    case 'error':
+                        events.error.push({
+                            cb: function (info) {
+                                // as above
+                                pattern(info);
+                            }
+                        });
+                        break;
                     default:
                         break;
                 }
@@ -143,6 +151,7 @@ define([
                 ready: [],
                 remove: [],
                 create: [],
+                error: [],
             };
 
             return function (obj, prop) {
@@ -689,9 +698,18 @@ define([
             var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
 
             var then = function () {
-                realtime.contentUpdate(strung);
+                try {
+                    realtime.contentUpdate(strung);
+                } catch (e) {
+                    proxy._events.error.forEach(function (handler) {
+                        handler.cb({
+                            type: 'CHAINPAD',
+                            error: e.message,
+                        });
+                    });
+                }
                 // try harder
-                if (realtime.getUserDoc() !== strung) { realtime.contentUpdate(strung); }
+                // if (realtime.getUserDoc() !== strung) { realtime.contentUpdate(strung); }
                 // onLocal
                 if (cfg.onLocal) { cfg.onLocal(); }
             };
@@ -772,7 +790,7 @@ define([
         };
 
         config.onError = function (info) {
-            proxy._events.disconnect.forEach(function (handler) {
+            proxy._events.error.forEach(function (handler) {
                 handler.cb(info);
             });
         };
