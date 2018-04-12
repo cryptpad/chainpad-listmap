@@ -681,6 +681,9 @@ define([
             config.network = cfg.network;
             config.websocketURL = cfg.websocketURL;
             config.validateKey = cfg.validateKey;
+            config.owners = cfg.owners;
+            config.expire = cfg.expire;
+            config.password = cfg.password;
         }
 
         var rt = {};
