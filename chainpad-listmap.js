@@ -741,6 +741,7 @@ define([
             if (ready) {
                 // never call ready more than once
                 initializing = false;
+                config.onRemote();
                 return;
             }
             if (!realtime || realtime !== info.realtime) {
