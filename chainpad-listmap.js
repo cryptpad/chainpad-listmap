@@ -680,10 +680,11 @@ define([
             config.crypto = cfg.crypto;
             config.network = cfg.network;
             config.websocketURL = cfg.websocketURL;
-            config.validateKey = cfg.validateKey;
-            config.owners = cfg.owners;
-            config.expire = cfg.expire;
-            config.password = cfg.password;
+            config.metadata = cfg.metadata || {
+                validateKey: cfg.validateKey,
+                owners: cfg.owners,
+                expire: cfg.expire
+            };
         }
 
         var rt = {};
