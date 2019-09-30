@@ -799,6 +799,9 @@ define([
 
         config.onMetadataUpdate = function (metadata) {
             rt.metadata = metadata;
+            if (typeof(cfg.onMetadataUpdate) === "function") {
+                cfg.onMetadataUpdate(metadata);
+            }
         };
 
         config.onError = function (info) {
