@@ -688,6 +688,8 @@ define([
         }
 
         var rt = {};
+        rt.metadata = {};
+
         var realtime;
 
         var proxy;
@@ -737,7 +739,6 @@ define([
             });
         };
 
-
         config.onReady = function (info) {
             if (ready) {
                 // never call ready more than once
@@ -748,6 +749,8 @@ define([
             if (!realtime || realtime !== info.realtime) {
                 realtime = rt.realtime = info.realtime;
             }
+
+            rt.metadata = info.metadata;
 
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
@@ -792,6 +795,10 @@ define([
             proxy._events.disconnect.forEach(function (handler) {
                 handler.cb(info);
             });
+        };
+
+        config.onMetadataUpdate = function (metadata) {
+            rt.metadata = metadata;
         };
 
         config.onError = function (info) {
