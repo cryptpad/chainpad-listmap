@@ -800,6 +800,12 @@ define([
             });
         };
 
+        config.onChannelError = function (info) {
+            proxy._events.error.forEach(function (handler) {
+                handler.cb(info);
+            });
+        };
+
         /*  Listmap support two configuration modes:
                 Sframe: for use within a sandboxed iframe
                 Classic: supporting our original use-case */
