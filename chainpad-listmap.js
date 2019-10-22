@@ -666,6 +666,7 @@ define([
                     JSON.parse(content);
                     return true;
                 } catch (e) {
+                    console.log(content);
                     console.error("Failed to parse, rejecting patch");
                     return false;
                 }
@@ -828,6 +829,16 @@ define([
 
         rt.proxy = proxy;
         rt.realtime = realtime;
+
+        // Change readOnly state in listmap and chainpad netflux
+        var _setReadOnly = rt.setReadOnly;
+        rt.setReadOnly = function (state, crypto) {
+            readOnly = state;
+            if (_setReadOnly) {
+                _setReadOnly(state, crypto);
+            }
+        }
+
         return rt;
     };
 
