@@ -745,6 +745,9 @@ define([
                 // never call ready more than once
                 initializing = false;
                 config.onRemote();
+                proxy._events.reconnect.forEach(function (handler) {
+                    handler.cb(info);
+                });
                 return;
             }
             if (!realtime || realtime !== info.realtime) {
@@ -787,9 +790,6 @@ define([
         config.onConnectionChange = function (info) {
             if (info.state) { // reconnect
                 initializing = true;
-                proxy._events.reconnect.forEach(function (handler) {
-                    handler.cb(info);
-                });
                 return;
             }
             // disconnected
