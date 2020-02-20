@@ -42,6 +42,7 @@ define([
                 }
 
                 if (isProxyable(value)) {
+                    // FIXME don't allow cyclic references
                     obj[prop] = deepProxy.create(value, cb);
                 } else {
                     obj[prop] = value;
