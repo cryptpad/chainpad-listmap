@@ -667,6 +667,7 @@ define([
                     JSON.parse(content);
                     return true;
                 } catch (e) {
+                    console.log(content);
                     console.error("Failed to parse, rejecting patch");
                     return false;
                 }
@@ -689,6 +690,8 @@ define([
         }
 
         var rt = {};
+        rt.metadata = {};
+
         var realtime;
 
         var proxy;
@@ -738,17 +741,21 @@ define([
             });
         };
 
-
         config.onReady = function (info) {
             if (ready) {
                 // never call ready more than once
                 initializing = false;
                 config.onRemote();
+                proxy._events.reconnect.forEach(function (handler) {
+                    handler.cb(info);
+                });
                 return;
             }
             if (!realtime || realtime !== info.realtime) {
                 realtime = rt.realtime = info.realtime;
             }
+
+            rt.metadata = info.metadata;
 
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
@@ -784,9 +791,6 @@ define([
         config.onConnectionChange = function (info) {
             if (info.state) { // reconnect
                 initializing = true;
-                proxy._events.reconnect.forEach(function (handler) {
-                    handler.cb(info);
-                });
                 return;
             }
             // disconnected
@@ -795,7 +799,20 @@ define([
             });
         };
 
+        config.onMetadataUpdate = function (metadata) {
+            rt.metadata = metadata;
+            if (typeof(cfg.onMetadataUpdate) === "function") {
+                cfg.onMetadataUpdate(metadata);
+            }
+        };
+
         config.onError = function (info) {
+            proxy._events.error.forEach(function (handler) {
+                handler.cb(info);
+            });
+        };
+
+        config.onChannelError = function (info) {
             proxy._events.error.forEach(function (handler) {
                 handler.cb(info);
             });
@@ -813,6 +830,16 @@ define([
 
         rt.proxy = proxy;
         rt.realtime = realtime;
+
+        // Change readOnly state in listmap and chainpad netflux
+        var _setReadOnly = rt.setReadOnly;
+        rt.setReadOnly = function (state, crypto) {
+            readOnly = state;
+            if (_setReadOnly) {
+                _setReadOnly(state, crypto);
+            }
+        }
+
         return rt;
     };
 
