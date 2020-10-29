@@ -741,7 +741,10 @@ define([
             });
         };
 
+
+        var idx = 0;
         config.onReady = function (info) {
+            idx = -1;
             if (ready) {
                 // never call ready more than once
                 initializing = false;
@@ -780,6 +783,15 @@ define([
             DeepProxy.remoteChangeFlag = true;
             DeepProxy.update(proxy, parsed, setterCb);
             DeepProxy.remoteChangeFlag = false;
+        };
+
+        config.onMessage = function () {
+            if (idx === -1) { return; }
+            if (cfg.updateProgress) {
+                cfg.updateProgress({
+                    progress: idx++
+                });
+            }
         };
 
         config.onAbort = function (info) {
