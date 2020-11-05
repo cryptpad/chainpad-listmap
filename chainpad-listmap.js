@@ -106,6 +106,14 @@ define([
                             }
                         });
                         break;
+                    case 'cacheready':
+                        events.cacheready.push({
+                            cb: function (info) {
+                                // as above
+                                pattern(info);
+                            }
+                        });
+                        break;
                     case 'disconnect':
                         events.disconnect.push({
                             cb: function (info) {
@@ -146,6 +154,7 @@ define([
 
         var getter = deepProxy.get = function () {
             var events = {
+                cacheready: [],
                 disconnect: [],
                 reconnect: [],
                 change: [],
@@ -207,8 +216,9 @@ define([
 
         deepProxy.checkLocalChange = function (obj, cb) {
             if (!isFakeProxy) { return; }
+            if (deepProxy.interval) { return; }
             var oldObj = stringifyFakeProxy(obj);
-            window.setInterval(function() {
+            deepProxy.interval = window.setInterval(function() {
                 var newObj = stringifyFakeProxy(obj);
                 if (newObj !== oldObj) {
                     oldObj = newObj;
@@ -263,6 +273,7 @@ define([
 
             if (isRoot) {
                 var events = {
+                    cacheready: [],
                     disconnect: [],
                     reconnect: [],
                     change: [],
@@ -674,6 +685,7 @@ define([
             },
             readOnly: cfg.readOnly,
             userName: cfg.userName || 'listmap',
+            Cache: cfg.Cache,
             logLevel: typeof(cfg.logLevel) === 'undefined'? 0: cfg.logLevel,
         };
 
@@ -741,6 +753,22 @@ define([
             });
         };
 
+        config.onCacheStart = function () {
+        };
+        config.onCacheReady = function (info) {
+            if (!realtime || realtime !== info.realtime) {
+                realtime = rt.realtime = info.realtime;
+            }
+
+            var userDoc = realtime.getUserDoc();
+            var parsed = JSON.parse(userDoc);
+            DeepProxy.update(proxy, parsed, setterCb);
+            DeepProxy.checkLocalChange(proxy, onLocal);
+
+            proxy._events.cacheready.forEach(function (handler) {
+                handler.cb(info);
+            });
+        };
 
         var idx = 0;
         config.onReady = function (info) {
