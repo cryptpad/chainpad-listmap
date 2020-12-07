@@ -753,8 +753,6 @@ define([
             });
         };
 
-        config.onCacheStart = function () {
-        };
         config.onCacheReady = function (info) {
             if (!realtime || realtime !== info.realtime) {
                 realtime = rt.realtime = info.realtime;
