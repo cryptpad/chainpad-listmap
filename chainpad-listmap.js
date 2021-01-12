@@ -758,10 +758,13 @@ define([
                 realtime = rt.realtime = info.realtime;
             }
 
+
             var userDoc = realtime.getUserDoc();
             var parsed = JSON.parse(userDoc);
             DeepProxy.update(proxy, parsed, setterCb);
             DeepProxy.checkLocalChange(proxy, onLocal);
+
+            if (ready) { return; }
 
             proxy._events.cacheready.forEach(function (handler) {
                 handler.cb(info);
