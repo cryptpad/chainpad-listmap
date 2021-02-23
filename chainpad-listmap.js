@@ -699,6 +699,7 @@ define([
                 owners: cfg.owners,
                 expire: cfg.expire
             };
+            config.onRejected = cfg.onRejected;
         }
 
         var rt = {};
