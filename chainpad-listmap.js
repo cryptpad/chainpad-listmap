@@ -1,7 +1,6 @@
 (function (window) {
-require.config({ paths: { 'json.sortify': '/bower_components/json.sortify/dist/JSON.sortify' } });
-define([
-    '/bower_components/chainpad-netflux/chainpad-netflux.js',
+define('chainpad-listmap', [
+    'chainpad-netflux',
     'json.sortify'
 ], function (Realtime, Sortify) {
     var api = {};
