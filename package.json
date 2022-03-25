@@ -1,6 +1,6 @@
 {
   "name": "chainpad-listmap",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "collaborative lists and maps in the browser.",
   "main": "chainpad-listmap.js",
   "scripts": {
