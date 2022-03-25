@@ -712,31 +712,32 @@ define('chainpad-listmap', [
         var ready = false;
 
         var localTo;
+
+        var stringifier = isFakeProxy? DeepProxy.stringifyFakeProxy: Sortify;
+        var onLocalFollowUp = function () {
+            var strung = stringifier(proxy);
+            try {
+                realtime.contentUpdate(strung);
+            } catch (e) {
+                proxy._events.error.forEach(function (handler) {
+                    handler.cb({
+                        type: 'CHAINPAD',
+                        error: e.message,
+                    });
+                });
+            }
+            // try harder
+            // if (realtime.getUserDoc() !== strung) { realtime.contentUpdate(strung); }
+            // onLocal
+            if (cfg.onLocal) { cfg.onLocal(); }
+        };
+
         var onLocal = config.onLocal = function (remote) {
             if (initializing) { return; }
             if (readOnly) { return; }
-            var strung = (isFakeProxy) ? DeepProxy.stringifyFakeProxy(proxy) : Sortify(proxy);
-
-            var then = function () {
-                try {
-                    realtime.contentUpdate(strung);
-                } catch (e) {
-                    proxy._events.error.forEach(function (handler) {
-                        handler.cb({
-                            type: 'CHAINPAD',
-                            error: e.message,
-                        });
-                    });
-                }
-                // try harder
-                // if (realtime.getUserDoc() !== strung) { realtime.contentUpdate(strung); }
-                // onLocal
-                if (cfg.onLocal) { cfg.onLocal(); }
-            };
-
             clearTimeout(localTo);
-            if (remote) { return void then(); }
-            localTo = setTimeout(then);
+            if (remote) { return void onLocalFollowUp(); }
+            localTo = setTimeout(onLocalFollowUp);
         };
 
         var setterCb = function () {
@@ -879,7 +880,7 @@ define('chainpad-listmap', [
             if (_setReadOnly) {
                 _setReadOnly(state, crypto);
             }
-        }
+        };
 
         return rt;
     };
