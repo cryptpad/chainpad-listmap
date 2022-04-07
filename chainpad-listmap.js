@@ -855,6 +855,9 @@ define('chainpad-listmap', [
         };
 
         config.onChannelError = function (info) {
+            if (info.error === 'E_MAX_SIZE') {
+                readOnly = true;
+            }
             proxy._events.error.forEach(function (handler) {
                 handler.cb(info);
             });
