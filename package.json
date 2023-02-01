@@ -19,5 +19,8 @@
   "homepage": "https://github.com/xwiki-labs/chainpad-listmap#readme",
   "devDependencies": {
     "jshint": "^2.9.5"
+  },
+  "dependencies": {
+    "chainpad-netflux": "^1.0.0"
   }
 }
