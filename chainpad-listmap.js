@@ -1,8 +1,6 @@
-(function (window) {
-define('chainpad-listmap', [
-    'chainpad-netflux',
-    'json.sortify'
-], function (Realtime, Sortify) {
+(function () {
+if (typeof(window) === "undefined" && typeof(global) !== "undefined") { global.window = global; }
+var factory = function (Realtime, Sortify) {
     var api = {};
     var ChainPad;
     // linter complains if this isn't defined
@@ -279,6 +277,7 @@ define('chainpad-listmap', [
                     ready: [],
                     remove: [],
                     create: [],
+                    error: []
                 };
                 proxy.on = on(events);
                 proxy._events = events;
@@ -886,5 +885,12 @@ define('chainpad-listmap', [
     };
 
     return api;
-});
-}(this));
+};
+    if (typeof(module) !== 'undefined' && module.exports) {
+        module.exports = factory(require("chainpad-netflux"), require('json.sortify'));
+    } else if ((typeof(define) !== 'undefined' && define !== null) && (define.amd !== null)) {
+        define('chainpad-listmap', ['chainpad-netflux', 'json.sortify'], factory);
+    } else {
+        // I'm not gonna bother supporting any other kind of instanciation
+    }
+}());

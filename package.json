@@ -1,6 +1,6 @@
 {
   "name": "chainpad-listmap",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "collaborative lists and maps in the browser.",
   "main": "chainpad-listmap.js",
   "scripts": {
@@ -21,6 +21,7 @@
     "jshint": "^2.9.5"
   },
   "dependencies": {
-    "chainpad-netflux": "^1.0.0"
+    "chainpad-netflux": "^1.0.0",
+    "json.sortify": "~2.1.0"
   }
 }
