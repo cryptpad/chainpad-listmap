@@ -1,6 +1,6 @@
 {
   "name": "chainpad-listmap",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "collaborative lists and maps in the browser.",
   "main": "chainpad-listmap.js",
   "scripts": {
@@ -9,19 +9,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xwiki-labs/chainpad-listmap.git"
+    "url": "git+https://github.com/cryptpad/chainpad-listmap.git"
   },
   "author": "",
   "license": "AGPL-3.0+",
   "bugs": {
-    "url": "https://github.com/xwiki-labs/chainpad-listmap/issues"
+    "url": "https://github.com/cryptpad/chainpad-listmap/issues"
   },
-  "homepage": "https://github.com/xwiki-labs/chainpad-listmap#readme",
+  "homepage": "https://github.com/cryptpad/chainpad-listmap#readme",
   "devDependencies": {
     "jshint": "^2.9.5"
   },
   "dependencies": {
-    "chainpad-netflux": "^1.0.0",
+    "chainpad-netflux": "^1.2.0",
     "json.sortify": "~2.1.0"
   }
 }
