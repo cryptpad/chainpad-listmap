@@ -1,6 +1,6 @@
 (function () {
-if (typeof(window) === "undefined" && typeof(global) !== "undefined") { global.window = global; }
 var factory = function (Realtime, Sortify) {
+    const window = globalThis;
     var api = {};
     var ChainPad;
     // linter complains if this isn't defined
