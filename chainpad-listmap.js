@@ -1,5 +1,5 @@
 (function () {
-var factory = function (Realtime, Sortify) {
+var factory = function (Realtime) {
     const window = globalThis;
     var api = {};
     var ChainPad;
@@ -8,6 +8,35 @@ var factory = function (Realtime, Sortify) {
     // "Proxy" is undefined in Safari : we need to use an normal object and check if there are local
     // changes regurlarly.
     var isFakeProxy = typeof window.Proxy === "undefined";
+
+    // Should have the same behaviour as
+    // https://www.npmjs.com/package/json.sortify when called with one argument
+    const isNumericalExpr = /^(0|[1-9]\d*)$/;
+    const sortKeys = obj => {
+        if (Array.isArray(obj)) {
+            return obj.map(sortKeys);
+        }
+        if (obj instanceof Object) {
+            let numeric = [];
+            let nonNumeric = [];
+            Object.keys(obj).forEach(key => {
+                if (isNumericalExpr.test(key)) {
+                    numeric.push(+key);
+                } else {
+                    nonNumeric.push(key);
+                }
+            });
+            return numeric.sort((a, b) => a - b).concat(nonNumeric.sort()).reduce((result, key) => {
+                result[key] = sortKeys(obj[key]);
+                return result;
+            }, {});
+        }
+        return obj;
+    };
+    const Sortify = (obj) => {
+        return JSON.stringify(sortKeys(obj));
+    }; 
+
 
     var DeepProxy = api.DeepProxy = (function () {
 
@@ -887,9 +916,9 @@ var factory = function (Realtime, Sortify) {
     return api;
 };
     if (typeof(module) !== 'undefined' && module.exports) {
-        module.exports = factory(require("chainpad-netflux"), require('json.sortify'));
+        module.exports = factory(require("chainpad-netflux"));
     } else if ((typeof(define) !== 'undefined' && define !== null) && (define.amd !== null)) {
-        define('chainpad-listmap', ['chainpad-netflux', 'json.sortify'], factory);
+        define('chainpad-listmap', ['chainpad-netflux'], factory);
     } else {
         // I'm not gonna bother supporting any other kind of instanciation
     }
